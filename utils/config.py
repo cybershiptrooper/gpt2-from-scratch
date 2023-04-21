@@ -20,10 +20,9 @@ class GPT2Config:
     init_range: float = 0.02
     n_ctx: int = 1024
     layer_norm_eps: float = 1e-5
-    debug = True
-    activation: Activation = Activation.relu
-
-tokenizer = TT.get_encoding("gpt2")
+    debug: bool = True
+    activation: Activation = Activation.gelu
+    logits: bool = False
 
 defaultConfig = GPT2Config()
 
