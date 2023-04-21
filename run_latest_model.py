@@ -8,7 +8,7 @@ import torch
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--prompt", type=str, default="Muzaffar was a hunter.")
-    parser.add_argument("--ans_tokens", type=int, default=100)
+    parser.add_argument("--ans_tokens", type=int, default=1)
     args = parser.parse_args()
     device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.has_mps else "cpu")
     latest_config = load_latest_model_config()

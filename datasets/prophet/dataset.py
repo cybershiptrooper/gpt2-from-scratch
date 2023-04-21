@@ -22,17 +22,22 @@ class ProphetDataset(torch.utils.data.Dataset):
         self.device = device
 
     def __len__(self):
-        return len(self.data) - self.block_size
+        return len(self.data) - self.block_size - 1
     
     def __getitem__(self, idx):
         if isinstance(idx, slice):
-            x = torch.stack(
-                [torch.from_numpy((self.data[i:i+self.block_size]).astype(np.int64)) 
-                    for i in range(*idx.indices(len(self.data))) ])
-            # use only the token after the block as rest are already available through x
-            y = torch.stack(
-                [torch.from_numpy( np.array( (self.data[i+1+self.block_size]).astype(np.int64) ) ) 
-                    for i in range(*idx.indices(len(self.data))) ]) 
+            try:
+                x = torch.stack(
+                    [torch.from_numpy((self.data[i:i+self.block_size]).astype(np.int64)) 
+                        for i in range(*idx.indices(len(self.data))) ])
+                # use only the token after the block as rest are already available through x
+                y = torch.stack(
+                    [torch.from_numpy( np.array( (self.data[i+1+self.block_size]).astype(np.int64) ) ) 
+                        for i in range(*idx.indices(len(self.data))) ]) 
+            except:
+                import time
+                print(f"Invalid slice, {idx} {len(self.data)} {self.block_size}")
+                time.sleep(1)
         else:
             x = torch.from_numpy((self.data[idx:idx+self.block_size]).astype(np.int64))
             y = torch.from_numpy( np.array( (self.data[idx+1+self.block_size]).astype(np.int64) ) )

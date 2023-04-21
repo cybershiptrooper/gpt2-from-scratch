@@ -4,7 +4,8 @@
 *.bin
 *.pth
 *.pt
-
+*.DS_Store
+ignore*
 #ignore nbs for now
 rough_work.ipynb 
 

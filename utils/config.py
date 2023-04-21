@@ -14,9 +14,6 @@ class GPT2Config:
     n_heads: int = 12
     d_mlp: int = 3072 # 4 * d_model
     dropout: float = 0.1
-    emb_dropout: float = 0.1
-    attn_dropout: float = 0.1
-    resid_dropout: float = 0.1
     init_range: float = 0.02
     n_ctx: int = 1024
     layer_norm_eps: float = 1e-5
