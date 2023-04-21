@@ -5,7 +5,7 @@ class SingleHeadAttention(nn.Module):
     Implements softmax(QK/root(d_k))V for a single attention head
     if d_k, etc. not provided, all of them must be equal to d_model
     '''
-    def __init__(self, d_model, d_head, init_range=0.02, verbose = False):
+    def __init__(self, d_model, d_head, init_range=0.02, verbose = False, save_pattern=False):
         super().__init__()
         self.Wk = nn.Parameter(torch.empty(d_model, d_head))
         self.Wv = nn.Parameter(torch.empty(d_model, d_head))
@@ -15,6 +15,8 @@ class SingleHeadAttention(nn.Module):
         nn.init.normal_(self.Wq, mean=0, std=init_range)
         self.d_k = d_head
         self.verbose = verbose
+        self.save_pattern = save_pattern
+        self.pattern = None
     
     def forward(self, residual_stream):
         if(self.verbose):
@@ -42,9 +44,15 @@ class SingleHeadAttention(nn.Module):
         # QK = [ [ Q[0]K[0], *remove : Q[0]K[1],.., Q[0]K[-1]* ], 
         #       [ Q[1]K[0], Q[1]K[1], * remove : .., Q[1]K[-1]* ], 
         #       ... ]
-        QK[torch.tril(QK) == 0 ] = -float('inf')
+        mask = torch.tril(torch.ones(QK.shape)).to(QK.device)
+        mask[mask == 0] = -float('inf')
+        mask[mask == 1] = 0
+        QK = torch.tril(QK) + mask
+        pattern = nn.Softmax(dim=-1)( ( QK ) / ( self.d_k**.5 ) )
+        if(self.save_pattern): 
+            self.pattern = pattern
         # dims after softmax: batch_size x words_per_sentence x words_per_sentence
-        return ( nn.Softmax(dim=-1)( ( QK ) / ( self.d_k**.5 ) ) )@ V
+        return  pattern @ V
     
 class MultiHeadAttention(nn.Module):
     '''
@@ -53,7 +61,7 @@ class MultiHeadAttention(nn.Module):
     2. Wo @ (Attention heads) 
     3. Write to residual stream
     '''
-    def __init__(self, d_model, n_heads, init_range=0.02, verbose = False):
+    def __init__(self, d_model, n_heads, init_range=0.02, verbose = False, save_pattern=False):
         super().__init__()
         assert d_model % n_heads == 0, "d_model must be divisible by n_heads"
         self.n_heads = n_heads
@@ -62,22 +70,25 @@ class MultiHeadAttention(nn.Module):
         self.attention_heads = nn.ModuleList([
             SingleHeadAttention(d_model, 
                                 d_head,
-                                init_range, verbose) 
+                                init_range, verbose, save_pattern=save_pattern) 
                     for _ in range(n_heads)])
         self.Wo = nn.Parameter(torch.empty(d_model, d_model))
         nn.init.normal_(self.Wo, mean=0, std=init_range)
+        self.save_pattern = save_pattern
+        self.pattern = None
         
     def forward(self, residual_stream):
         if(self.verbose):
             print("Multi attention head input shapes: ", residual_stream.shape)
         
         # TODO: Parallelize this!!!
-        attention_heads = [self.attention_heads[i](residual_stream) 
+        attention_out_list = [self.attention_heads[i](residual_stream) 
                            for i in range(self.n_heads)] # This is not parallel!!
-        attention_out = torch.cat(attention_heads, dim=-1)
-
+        attention_out = torch.cat(attention_out_list, dim=-1)
+        if(self.save_pattern):
+            self.pattern = [self.attention_heads[i].pattern for i in range(self.n_heads)]
         if(self.verbose):
-            print("Multi attention head output shapes: ", [x.shape for x in attention_heads])
+            print("Multi attention head output shapes: ", [x.shape for x in attention_out_list])
             print("Multi attention head concatenated shape: ", attention_out.shape)
         
         # each word is now a weighted sum of the other words in the sentence
