@@ -8,7 +8,7 @@
 ignore*
 #ignore nbs for now
 rough_work.ipynb 
-
+shakespeare/
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

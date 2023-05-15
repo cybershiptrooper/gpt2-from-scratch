@@ -19,7 +19,7 @@ def process_tokens(tokens, tokenizer, config):
         prompt_length = config.n_ctx
     return prompt_tokens, prompt_length
 
-def decode_prompt(model: torch.nn.Module, prompt, tokenizer, config, device="cpu", max_len=100):
+def decode_prompt(model: torch.nn.Module, prompt, tokenizer, config, device="cpu", max_len=100, verbose=True):
     model.eval()
     result = []
     prompt_tokens_orig = tokenizer.encode(prompt)
@@ -31,15 +31,19 @@ def decode_prompt(model: torch.nn.Module, prompt, tokenizer, config, device="cpu
             input = torch.tensor(prompt_tokens).unsqueeze(0).to(device)
             out = model(input)
             out.squeeze_(0)
-            print(out.argmax(dim=-1))
+            if(verbose):
+                print("Out vector: ", out.argmax(dim=-1))
             # Predict the next word: 
-            # for a single word prompt, length = 1
-            # first out position = 1 + 0 - 1 (length + i - 1)
-            max_of_out = out[prompt_length+i-1].argmax(dim=-1)
+            # out position when prompt_length < context = prompt_length
+            # out position when prompt >= context = out[-1]
+            out_pos = prompt_length-1 if prompt_length < config.n_ctx else -1
+            max_of_out = out[out_pos].argmax(dim=-1)
+            
             prompt_tokens_orig.append(max_of_out.item())  #append suggestion to prompt
-            print(prompt_length+i-1, len(prompt_tokens_orig)-1)
             result.append(tokenizer.decode([max_of_out.item()]))
-            print(tokenizer.decode([max_of_out.item()]), max_of_out.item())
+            if(verbose):
+                print("Predicted word: {}, token: {}".format(tokenizer.decode([max_of_out.item()]), 
+                                                        max_of_out.item()) )
     result = prompt + ' ' + ' '.join(result)
 
     return result

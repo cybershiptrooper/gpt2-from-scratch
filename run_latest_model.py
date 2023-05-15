@@ -7,8 +7,9 @@ import torch
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--prompt", type=str, default="Muzaffar was a hunter.")
-    parser.add_argument("--ans_tokens", type=int, default=1)
+    parser.add_argument("--prompt", type=str, default="Muzaffar was dead")
+    parser.add_argument("--ans_tokens", type=int, default=20)
+    parser.add_argument("--verbose", type=bool, default=False)
     args = parser.parse_args()
     device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.has_mps else "cpu")
     latest_config = load_latest_model_config()
@@ -16,4 +17,5 @@ if __name__ == "__main__":
     load_latest_model(model)
     model.to(device)
     tokenizer = TT.get_encoding("gpt2")
-    print(decode_prompt(model, args.prompt, tokenizer, latest_config, device=device, max_len=args.ans_tokens))
+    print(decode_prompt(model, args.prompt, tokenizer, 
+                        latest_config, device=device, max_len=args.ans_tokens, verbose=args.verbose))
