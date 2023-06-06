@@ -133,20 +133,18 @@ class MultiHeadAttention(nn.Module):
             mask[mask == 1] = 0
             qks = torch.tril(qks) + mask
 
-            if(self.verbose):
-                print("[parallel] Multihead attention Q, K, V shapes: ", qs.shape, ks.shape, vs.shape)
-                print("[parallel] Multihead attention Q @ K shape: ", qks.shape)
-
             pattern = (nn.Softmax(dim=-1)( 
                 ( qks ) / ((self.d_model / self.n_heads)**.5) 
                 ))
             
-            if(self.verbose):
-                print("[parallel] Multihead attention pattern shape: ", pattern.shape)
-
             if(self.save_pattern):
                 self.pattern = pattern
-            out = residual_stream + (pattern @ vs).reshape((batch_size, wps, -1))
+            out = self.Wo @ (pattern @ vs).reshape((batch_size, wps, -1))
+
             if(self.verbose):
+                print("[parallel] Multihead attention Q, K, V shapes: ", qs.shape, ks.shape, vs.shape)
+                print("[parallel] Multihead attention Q @ K shape: ", qks.shape)
+                print("[parallel] Multihead attention pattern shape: ", pattern.shape)
                 print("[parallel] Multihead attention output shape: ", out.shape)
-            return  out
+
+            return residual_stream + out
