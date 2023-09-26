@@ -139,8 +139,14 @@ class MultiHeadAttention(nn.Module):
             
             if(self.save_pattern):
                 self.pattern = pattern
-            out = self.Wo @ (pattern @ vs).reshape((batch_size, wps, -1))
-
+            
+            out = torch.einsum('ij, ...j -> ...i',                  # matmul
+                               self.Wo,                             # d_model x d_model
+                               ((
+                                   pattern @ vs                     # batch x n_heads x wps x d_head
+                                ).reshape((batch_size, wps, -1)))   # batch x wps x d_model
+                                )                                   # batch x wps x d_model
+            
             if(self.verbose):
                 print("[parallel] Multihead attention Q, K, V shapes: ", qs.shape, ks.shape, vs.shape)
                 print("[parallel] Multihead attention Q @ K shape: ", qks.shape)

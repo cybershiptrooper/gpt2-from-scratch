@@ -6,7 +6,7 @@ from utils.config import *
 from utils.train import train_net
 
 if __name__ == "__main__":
-    device = 'cuda' if torch.cuda.is_available() else 'mps' if torch.has_mps else 'cpu'
+    device = 'cuda' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_built() else 'cpu'
     torch.manual_seed(1) # for reproducibility
     config = GPT2Config(
         debug=False,

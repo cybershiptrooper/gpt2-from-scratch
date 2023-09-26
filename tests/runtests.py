@@ -11,9 +11,9 @@ from utils.copy_weights import *
 
 d_model = 4
 vocab_size = 10
-batch_size = 2
+batch_size = 5
 words_per_sentence = 3
-device = 'cuda' if torch.cuda.is_available() else 'mps' if torch.has_mps else 'cpu'
+device = 'cuda' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_built() else 'cpu'
 torch.manual_seed(0)
 class TestShapes():
     def test_word_embeddings(self):
@@ -40,7 +40,15 @@ class TestShapes():
         # output shape: batch_size x words_per_sentence x d_model
         assert y.shape == (batch_size, words_per_sentence, int(d_model/2))
 
-    def test_multihead_attention(self):
+    def test_pipeline_multihead_attention(self):
+        attn = MultiHeadAttention(d_model, n_heads=2, verbose=True, parallel=False)
+        attn.to(device)
+        resid_strm = torch.rand(batch_size, words_per_sentence, d_model).to(device)
+        y = attn(resid_strm)
+        # output shape: batch_size x words_per_sentence x d_model
+        assert y.shape == (batch_size, words_per_sentence, d_model)
+
+    def test_parallel_multihead_attention(self):
         attn = MultiHeadAttention(d_model, n_heads=2, verbose=True)
         attn.to(device)
         resid_strm = torch.rand(batch_size, words_per_sentence, d_model).to(device)
@@ -163,14 +171,14 @@ class TestValuesUsingReference():
             out = layer(x)
             ref_out = ref(x)
         assert torch.isclose(out, ref_out, atol=1e-4, rtol=1e-3).all()
-
-    def test_multihead_attention(self):
-        # self.setup_reference()
-        # ref = self.reference_model.h[0].attn(self.input_tokens)
-        # attn = MultiHeadAttention(defaultConfig.d_model, n_heads=defaultConfig.n_heads)
-        # # attn.to(device) # ideally, we should check across devices, but my architecture sucks rn
-        # self.copier.copy_multihead_attention(attn)
-        # with torch.no_grad():
-        #     out = attn(self.input_tokens)
-        # assert (out == ref).all()
-        pass
+    # cannot test attention and (probably) mlp as they are very different in HF
+    # def test_multihead_attention(self):
+    #     # self.setup_reference()
+    #     # ref = self.reference_model.h[0].attn(self.input_tokens)
+    #     # attn = MultiHeadAttention(defaultConfig.d_model, n_heads=defaultConfig.n_heads)
+    #     # # attn.to(device) # ideally, we should check across devices, but my architecture sucks rn
+    #     # self.copier.copy_multihead_attention(attn)
+    #     # with torch.no_grad():
+    #     #     out = attn(self.input_tokens)
+    #     # assert (out == ref).all()
+    #     pass

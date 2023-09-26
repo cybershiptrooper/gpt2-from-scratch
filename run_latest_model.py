@@ -11,7 +11,7 @@ if __name__ == "__main__":
     parser.add_argument("--ans_tokens", type=int, default=20)
     parser.add_argument("--verbose", type=bool, default=False)
     args = parser.parse_args()
-    device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.has_mps else "cpu")
+    device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_built() else "cpu")
     latest_config = load_latest_model_config()
     model = TransformerModel(config=latest_config)
     load_latest_model(model)
